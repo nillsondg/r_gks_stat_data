@@ -16,8 +16,18 @@ years <- data.frame(years_v, db_names)
 #load doc with stat data and convert containing table into dataframe
 loadGKSData <- function(ref){
   url <- paste(host_name, ref, sep = "")
-  doc <- htmlParse(url, encoding = "Windows-1251")
-  tables <- readHTMLTable(doc, trim = TRUE, as.data.frame = TRUE, which = 1)
+  doc <- htmlParse(url)
+  tables <- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE, as.data.frame = TRUE, encoding="Windows-1251")
+  #res <- gsub("&nbsp;"," ", tables)
+  #res <- toLocalEncoding(res)
+}
+
+toLocalEncoding <- function(x, sep="\t", quote=FALSE, encoding="utf-8"){
+  rawtsv <- tempfile()
+  write.table(x, file=rawtsv, sep=sep, quote=quote)
+  result <- read.table(file(rawtsv, encoding=encoding), sep=sep, quote=quote)
+  unlink(rawtsv)
+  result
 }
 
 #dialog with user and return reference to needed stat doc
@@ -33,6 +43,7 @@ getGKSDataRef <- function(){
     url <- paste(host_name, path, db_name, params, id, sep = '')
     xml <- xmlTreeParse(url, useInternalNodes = T)
     names <- xpathSApply(xml, "//name", xmlValue)
+    Encoding(names) <- "UTF-8" 
     refs <- xpathSApply(xml, "//ref", xmlValue)
     for(i in 1:length(names))
       print(paste(i, names[i]))
