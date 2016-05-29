@@ -17,16 +17,15 @@ years <- data.frame(years_v, db_names)
 
 #load doc with stat data and convert containing table into dataframe
 loadGKSData <- function(ref){
-  url <- paste(host_name, ref, sep = "")
-  ext <- file_ext(url)
+  ext <- file_ext(ref)
   if(ext == "doc"){
     print("Неподдерживаемый тип источника")
-    #getTableFromDoc(url)
+    #getTableFromDoc(ref)
   }
   if(ext == "docx"){
-    getTableFromDoc(url)
+    getTableFromDoc(ref)
   }else if(ext == "htm"){
-    getTableFromHtm(url)
+    getTableFromHtm(ref)
   }else
     print("Неподдерживаемый тип источника")
   
@@ -65,14 +64,16 @@ getGKSDataRef <- function(){
   }
 }
 
-getTableFromHtm <- function(doc) {
-  doc <- htmlParse(url)
+getTableFromHtm <- function(ref) {
+  url <- paste(host_name, ref, sep = "")
+  doc <- htmlParse(url, encoding = "Windows-1251")
   if(length(xpathSApply(doc,"//table", xmlValue)) == 0){
     print("Нет таблицы в источнике")
     return()
   }
   
-  data <- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE, as.data.frame = TRUE, encoding="Windows-1251")
+  data <<- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE,
+                        as.data.frame = TRUE)
   #res <- gsub("&nbsp;"," ", tables)
   #res <- toLocalEncoding(res)
 }
@@ -109,5 +110,5 @@ getTableFromDoc <- function(word_doc) {
     dat
     
   })
-  data <- dat
+  data <<- dat
 }
