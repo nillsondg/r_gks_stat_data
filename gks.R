@@ -1,4 +1,6 @@
 library(XML)
+library(xml2)
+library(tools)
 # init
 host_name <- 'http://www.gks.ru'
 
@@ -16,10 +18,18 @@ years <- data.frame(years_v, db_names)
 #load doc with stat data and convert containing table into dataframe
 loadGKSData <- function(ref){
   url <- paste(host_name, ref, sep = "")
-  doc <- htmlParse(url)
-  tables <- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE, as.data.frame = TRUE, encoding="Windows-1251")
-  #res <- gsub("&nbsp;"," ", tables)
-  #res <- toLocalEncoding(res)
+  ext <- file_ext(url)
+  if(ext == "doc"){
+    print("Неподдерживаемый тип источника")
+    #getTableFromDoc(url)
+  }
+  if(ext == "docx"){
+    getTableFromDoc(url)
+  }else if(ext == "htm"){
+    getTableFromHtm(url)
+  }else
+    print("Неподдерживаемый тип источника")
+  
 }
 
 toLocalEncoding <- function(x, sep="\t", quote=FALSE, encoding="utf-8"){
@@ -53,4 +63,51 @@ getGKSDataRef <- function(){
       return(ref)
     id <- substr(ref, 2, nchar(ref))
   }
+}
+
+getTableFromHtm <- function(doc) {
+  doc <- htmlParse(url)
+  if(length(xpathSApply(doc,"//table", xmlValue)) == 0){
+    print("Нет таблицы в источнике")
+    return()
+  }
+  
+  data <- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE, as.data.frame = TRUE, encoding="Windows-1251")
+  #res <- gsub("&nbsp;"," ", tables)
+  #res <- toLocalEncoding(res)
+}
+
+##get tables from doc
+getTableFromDoc <- function(word_doc) {
+  
+  tmpd <- tempdir()
+  tmpf <- tempfile(tmpdir=tmpd, fileext=".zip")
+  
+  file.copy(word_doc, tmpf)
+  unzip(tmpf, exdir=sprintf("%s/docdata", tmpd))
+  
+  doc <- read_xml(sprintf("%s/docdata/word/document.xml", tmpd))
+  
+  unlink(tmpf)
+  unlink(sprintf("%s/docdata", tmpd), recursive=TRUE)
+  
+  ns <- xml_ns(doc)
+  
+  tbls <- xml_find_all(doc, ".//w:tbl", ns=ns)
+  
+  lapply(tbls, function(tbl) {
+    
+    cells <- xml_find_all(tbl, "./w:tr/w:tc", ns=ns)
+    rows <- xml_find_all(tbl, "./w:tr", ns=ns)
+    dat <- data.frame(matrix(xml_text(cells), 
+                             ncol=(length(cells)/length(rows)), 
+                             byrow=TRUE), 
+                      stringsAsFactors=FALSE)
+    colnames(dat) <- dat[1,]
+    dat <- dat[-1,]
+    rownames(dat) <- NULL
+    dat
+    
+  })
+  data <- dat
 }
