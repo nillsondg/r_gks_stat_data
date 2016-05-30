@@ -31,11 +31,11 @@ loadGKSData <- function(ref){
   
 }
 
-toLocalEncoding <- function(x, sep="\t", quote=FALSE, encoding="utf-8"){
-  rawtsv <- tempfile()
-  write.table(x, file=rawtsv, sep=sep, quote=quote)
-  result <- read.table(file(rawtsv, encoding=encoding), sep=sep, quote=quote)
-  unlink(rawtsv)
+toLocalEncoding <- function(x, sep=",", quote=TRUE, encoding="utf-8"){
+  rawcsv <- tempfile()
+  write.csv(x, file = rawcsv)
+  result <- read.csv(rawcsv, encoding = "UTF-8")
+  unlink(rawcsv)
   result
 }
 
@@ -72,10 +72,12 @@ getTableFromHtm <- function(ref) {
     return()
   }
   
-  data <<- readHTMLTable(doc, trim = TRUE, which = 1, stringsAsFactors = FALSE,
-                        as.data.frame = TRUE)
-  #res <- gsub("&nbsp;"," ", tables)
-  #res <- toLocalEncoding(res)
+  assign("dataGKS", readHTMLTable(doc, trim = TRUE, which = 1,
+                                  stringsAsFactors = FALSE,
+                                  as.data.frame = TRUE), .GlobalEnv)
+  names(dataGKS) <<- gsub("[\r\n]", "", names(dataGKS))
+  dataGKS[, 1] <<- gsub("[\r\n]", "", dataGKS[, 1])
+  dataGKS <<- toLocalEncoding(dataGKS)
 }
 
 ##get tables from doc
@@ -107,8 +109,6 @@ getTableFromDoc <- function(word_doc) {
     colnames(dat) <- dat[1,]
     dat <- dat[-1,]
     rownames(dat) <- NULL
-    dat
-    
+    assign("dataGKS", dat, .GlobalEnv)
   })
-  data <<- dat
 }
